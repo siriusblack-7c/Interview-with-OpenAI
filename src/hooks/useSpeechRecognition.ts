@@ -53,7 +53,7 @@ export const useSpeechRecognition = ({ onFinalTranscript, pauseListening = false
             recognition.serviceURI = undefined // Let browser choose
 
             // Additional timeout handling for production
-            let silenceTimeout: NodeJS.Timeout | null = null
+            let silenceTimeout: number | null = null
 
             console.log('🎤 [Mic] Speech recognition configured')
 
