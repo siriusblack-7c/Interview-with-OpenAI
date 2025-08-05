@@ -22,7 +22,7 @@ export const Message = ({ entry }: MessageProps) => {
         >
             <div className="flex justify-between items-center mb-3 text-sm">
                 <span className="font-bold text-gray-700">
-                    {entry.type === 'question' ? '🧑‍💼 Interviewer' : '🤖 AI Candidate'}
+                    {entry.type === 'question' ? '👤 You (Candidate)' : '🧑‍💼 AI Interviewer'}
                 </span>
                 <span className="text-gray-500 text-xs">
                     {entry.timestamp.toLocaleTimeString()}

@@ -5,6 +5,8 @@ export const useOpenAI = () => {
     const [isResponding, setIsResponding] = useState(false)
     const [apiError, setApiError] = useState<string | null>(null)
     const [apiConfigured, setApiConfigured] = useState(() => openAIService.isConfigured())
+    const [isMuted, setIsMuted] = useState(false)
+    const [contextStatus, setContextStatus] = useState(() => openAIService.getContextStatus())
 
     const synthRef = useRef<SpeechSynthesis | null>(null)
 
@@ -24,9 +26,9 @@ export const useOpenAI = () => {
 
             onResponseGenerated(response)
 
-            // Speak the response
+            // Speak the response (only if not muted)
             console.log('🔊 [TTS] Starting speech synthesis')
-            if (synthRef.current) {
+            if (synthRef.current && !isMuted) {
                 const utterance = new SpeechSynthesisUtterance(response)
                 utterance.rate = 0.9
                 utterance.pitch = 1
@@ -47,8 +49,11 @@ export const useOpenAI = () => {
                 }
 
                 synthRef.current.speak(utterance)
-            } else {
+            } else if (!synthRef.current) {
                 console.log('❌ [TTS] Speech synthesis not available')
+                setIsResponding(false)
+            } else {
+                console.log('🔇 [TTS] Audio muted - skipping speech synthesis')
                 setIsResponding(false)
             }
         } catch (error) {
@@ -66,13 +71,67 @@ export const useOpenAI = () => {
         openAIService.clearConversation()
     }
 
+    const toggleMute = () => {
+        setIsMuted(prev => !prev)
+        console.log('🔇 [TTS] Audio', isMuted ? 'unmuted' : 'muted')
+    }
+
+    const setResumeContent = (content: string) => {
+        openAIService.setResumeContent(content)
+        setContextStatus(openAIService.getContextStatus())
+    }
+
+    const setJobDescription = (content: string) => {
+        openAIService.setJobDescription(content)
+        setContextStatus(openAIService.getContextStatus())
+    }
+
+    const generateInitialQuestion = async (onResponseGenerated: (response: string) => void) => {
+        setIsResponding(true)
+        setApiError(null)
+
+        try {
+            const response = await openAIService.generateInitialQuestion()
+            onResponseGenerated(response)
+
+            // Speak the initial question
+            if (synthRef.current && !isMuted) {
+                const utterance = new SpeechSynthesisUtterance(response)
+                utterance.rate = 0.9
+                utterance.pitch = 1
+                utterance.volume = 0.8
+
+                utterance.onend = () => {
+                    setIsResponding(false)
+                }
+
+                utterance.onerror = () => {
+                    setIsResponding(false)
+                }
+
+                synthRef.current.speak(utterance)
+            } else {
+                setIsResponding(false)
+            }
+        } catch (error) {
+            console.error('❌ [Initial Question] Error:', error)
+            setIsResponding(false)
+        }
+    }
+
     return {
         isResponding,
         apiError,
         apiConfigured,
+        isMuted,
+        contextStatus,
         generateResponse,
         clearApiError,
         clearOpenAIConversation,
+        toggleMute,
+        setResumeContent,
+        setJobDescription,
+        generateInitialQuestion,
         setApiConfigured
     }
 }

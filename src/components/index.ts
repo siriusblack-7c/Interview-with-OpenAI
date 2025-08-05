@@ -8,6 +8,9 @@ export { Message } from './Message'
 export { EmptyState } from './EmptyState'
 export { ErrorMessage } from './ErrorMessage'
 export { SetupInstructions } from './SetupInstructions'
+export { FileUploader } from './FileUploader'
+export { InterviewSetup } from './InterviewSetup'
+export { InterviewControls } from './InterviewControls'
 
 // Re-export types
 export type { ConversationEntry } from './Message'

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 
 interface UseSpeechRecognitionOptions {
     onFinalTranscript: (transcript: string) => void
+    pauseListening?: boolean
 }
 
 declare global {
@@ -11,10 +12,11 @@ declare global {
     }
 }
 
-export const useSpeechRecognition = ({ onFinalTranscript }: UseSpeechRecognitionOptions) => {
+export const useSpeechRecognition = ({ onFinalTranscript, pauseListening = false }: UseSpeechRecognitionOptions) => {
     const [isListening, setIsListening] = useState(false)
     const [currentTranscript, setCurrentTranscript] = useState('')
     const [isSupported, setIsSupported] = useState(false)
+    const [wasPausedForSpeech, setWasPausedForSpeech] = useState(false)
 
     const recognitionRef = useRef<any | null>(null)
 
@@ -110,6 +112,31 @@ export const useSpeechRecognition = ({ onFinalTranscript }: UseSpeechRecognition
             }
         }
     }, [onFinalTranscript])
+
+    // Effect to handle pausing/resuming recognition during AI speech
+    useEffect(() => {
+        if (pauseListening && isListening) {
+            console.log('⏸️ [Mic] Pausing recognition during AI speech')
+            setWasPausedForSpeech(true)
+            if (recognitionRef.current) {
+                recognitionRef.current.stop()
+            }
+        } else if (!pauseListening && wasPausedForSpeech) {
+            console.log('▶️ [Mic] Resuming recognition after AI speech')
+            setWasPausedForSpeech(false)
+            if (recognitionRef.current && isSupported) {
+                setTimeout(() => {
+                    try {
+                        recognitionRef.current.start()
+                        setIsListening(true)
+                    } catch (error) {
+                        console.error('❌ [Mic] Error resuming recognition:', error)
+                        setIsListening(false)
+                    }
+                }, 500) // Small delay to ensure TTS has fully stopped
+            }
+        }
+    }, [pauseListening, wasPausedForSpeech, isListening, isSupported])
 
     const startListening = () => {
         console.log('🎤 [Controls] Starting microphone...')

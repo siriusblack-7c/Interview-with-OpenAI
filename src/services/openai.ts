@@ -11,23 +11,26 @@ export interface ConversationMessage {
     content: string
 }
 
-// System prompt for the AI to act as an interview candidate
-const SYSTEM_PROMPT = `You are an experienced software developer participating in a job interview. You should:
+// System prompt for the AI to act as an professional interviewer
+const SYSTEM_PROMPT = `You are a professional technical interviewer conducting a job interview. You should:
 
-- Answer questions professionally and conversationally
-- Draw from realistic experience with modern web technologies (React, JavaScript, TypeScript, Node.js, databases, etc.)
-- Be confident but humble
-- Give specific examples when appropriate
-- Keep responses concise (1-3 sentences typically)
-- Show enthusiasm for learning and problem-solving
-- Be natural and personable
+- Ask thoughtful, relevant interview questions
+- Focus on technical skills, experience, and problem-solving abilities
+- Ask follow-up questions based on candidate responses
+- Keep questions concise and clear (1-2 sentences typically)
+- Be professional but friendly
+- Ask about specific technologies, projects, and scenarios
+- Gradually increase complexity based on candidate's responses
+- Ask both technical and behavioral questions
 
-Remember: You're the candidate being interviewed, not the interviewer. Answer questions as if you're showcasing your skills and experience.`
+Remember: You're the interviewer asking questions, not answering them. Guide the conversation and evaluate the candidate's responses.`
 
 export class OpenAIService {
     private conversationHistory: ConversationMessage[] = [
         { role: 'system', content: SYSTEM_PROMPT }
     ]
+    private resumeContent: string = ''
+    private jobDescriptionContent: string = ''
 
     async generateResponse(question: string): Promise<string> {
         console.log('🤖 [OpenAI] Generating response for:', question)
@@ -93,11 +96,51 @@ export class OpenAIService {
         }
     }
 
+    // Set resume content for personalized interviews
+    setResumeContent(content: string): void {
+        this.resumeContent = content
+        this.updateSystemPrompt()
+        console.log('📄 [Context] Resume content updated')
+    }
+
+    // Set job description for targeted interviews
+    setJobDescription(content: string): void {
+        this.jobDescriptionContent = content
+        this.updateSystemPrompt()
+        console.log('💼 [Context] Job description updated')
+    }
+
+    // Update system prompt with context
+    private updateSystemPrompt(): void {
+        let contextualPrompt = SYSTEM_PROMPT
+
+        if (this.resumeContent || this.jobDescriptionContent) {
+            contextualPrompt += `\n\nCONTEXT FOR THIS INTERVIEW:`
+
+            if (this.jobDescriptionContent) {
+                contextualPrompt += `\n\nJOB DESCRIPTION:\n${this.jobDescriptionContent}`
+            }
+
+            if (this.resumeContent) {
+                contextualPrompt += `\n\nCANDIDATE'S RESUME:\n${this.resumeContent}`
+            }
+
+            contextualPrompt += `\n\nBased on this context, ask relevant questions that assess the candidate's fit for this specific role. Reference specific requirements from the job description and explore experiences mentioned in their resume.
+
+IMPORTANT: Start each interview session with a brief welcome and your first question. Don't wait for the candidate to speak first.`
+        }
+
+        // Update the system message in conversation history
+        this.conversationHistory[0] = { role: 'system', content: contextualPrompt }
+        console.log('🎯 [Context] System prompt updated with personalized context')
+    }
+
     // Reset conversation for a fresh start
     clearConversation(): void {
         this.conversationHistory = [
             { role: 'system', content: SYSTEM_PROMPT }
         ]
+        this.updateSystemPrompt() // Maintain context after clearing
     }
 
     // Check if API key is configured
@@ -106,6 +149,33 @@ export class OpenAIService {
             import.meta.env.VITE_OPENAI_API_KEY !== 'your_openai_api_key_here'
         console.log('🔍 [OpenAI] API configured:', configured)
         return configured
+    }
+
+    // Check if interview context is complete
+    isContextComplete(): boolean {
+        return !!(this.resumeContent && this.jobDescriptionContent)
+    }
+
+    // Get current context status
+    getContextStatus() {
+        return {
+            hasResume: !!this.resumeContent,
+            hasJobDescription: !!this.jobDescriptionContent,
+            isComplete: this.isContextComplete()
+        }
+    }
+
+    // Generate initial interview question to start the session
+    async generateInitialQuestion(): Promise<string> {
+        console.log('🚀 [OpenAI] Generating initial interview question')
+
+        try {
+            const response = await this.generateResponse('Please start the interview with a brief welcome and your first question for me.')
+            return response
+        } catch (error) {
+            console.error('❌ [OpenAI] Error generating initial question:', error)
+            return "Hello! Welcome to your interview today. I'm excited to learn more about your background and experience. Could you please start by telling me a bit about yourself and what interests you about this role?"
+        }
     }
 }
 
