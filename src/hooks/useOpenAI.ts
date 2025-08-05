@@ -72,6 +72,7 @@ export const useOpenAI = () => {
         apiConfigured,
         generateResponse,
         clearApiError,
-        clearOpenAIConversation
+        clearOpenAIConversation,
+        setApiConfigured
     }
 }
