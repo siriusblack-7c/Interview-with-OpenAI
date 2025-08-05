@@ -106,8 +106,8 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen w-full flex flex-row p-4 font-sans bg-gray-50">
-      <div className="w-full max-w-6xl space-y-6">
+    <div className="min-h-screen w-full flex flex-row p-6 font-sans bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30">
+      <div className="w-full max-w-6xl space-y-8">
         <Header
           title="🎤 AI Interview Session ✨"
           subtitle={`Personalized interview • ${resumeFileName} • ${jobDescriptionFileName}`}

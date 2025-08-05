@@ -5,9 +5,9 @@ interface HeaderProps {
 
 export const Header = ({ title, subtitle }: HeaderProps) => {
     return (
-        <header className="text-center p-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl text-white shadow-glow-blue w-full">
-            <h1 className="mb-2 text-4xl md:text-5xl font-bold text-center">{title}</h1>
-            <p className="text-lg opacity-90">{subtitle}</p>
+        <header className="text-center py-8 px-6 bg-white rounded-xl border border-gray-200 shadow-lg w-full">
+            <h1 className="mb-3 text-3xl font-bold text-gray-900 tracking-tight">{title}</h1>
+            <p className="text-base text-gray-600 max-w-2xl mx-auto leading-relaxed">{subtitle}</p>
         </header>
     )
 }

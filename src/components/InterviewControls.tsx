@@ -15,7 +15,7 @@ export const InterviewControls = ({
 
     return (
         <div className="w-full max-w-4xl mx-auto text-center py-8">
-            <div className="bg-white rounded-2xl shadow-xl p-8">
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8">
                 <div className="space-y-6">
                     <div>
                         <h2 className="text-2xl font-bold text-gray-800 mb-2">
@@ -29,12 +29,13 @@ export const InterviewControls = ({
 
                     <button
                         className={`
-              px-12 py-4 rounded-full text-xl font-semibold cursor-pointer transition-all duration-300
-              ${isResponding
+                            px-12 py-4 rounded-xl text-lg font-semibold transition-all duration-200
+                            ${isResponding
                                 ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                                : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg hover:-translate-y-1 hover:shadow-xl'
+                                : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl hover:scale-105 active:scale-95'
                             }
-            `}
+                            flex items-center justify-center gap-2 min-w-[200px]
+                        `}
                         onClick={onStartInterview}
                         disabled={isResponding}
                     >

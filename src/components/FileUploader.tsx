@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 
 interface FileUploaderProps {
     title: string
@@ -19,6 +19,7 @@ export const FileUploader = ({
 }: FileUploaderProps) => {
     const [isDragOver, setIsDragOver] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
+    const fileInputRef = useRef<HTMLInputElement>(null)
 
     const readFile = useCallback((file: File): Promise<string> => {
         return new Promise((resolve, reject) => {
@@ -59,49 +60,82 @@ export const FileUploader = ({
         handleFileUpload(e.target.files)
     }, [handleFileUpload])
 
+    const handleClick = useCallback(() => {
+        fileInputRef.current?.click()
+    }, [])
+
     return (
-        <div className="w-full">
-            <h3 className="text-lg font-semibold text-gray-700 mb-3">{icon} {title}</h3>
+        <div className="w-full group">
+            <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <span className="text-lg">{icon}</span>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+            </div>
+
+            {/* Hidden file input */}
+            <input
+                ref={fileInputRef}
+                type="file"
+                accept={acceptedTypes}
+                onChange={handleFileSelect}
+                className="hidden"
+                disabled={isUploading}
+            />
 
             <div
                 className={`
-          relative border-2 border-dashed rounded-xl p-6 text-center transition-all duration-300
-          ${isDragOver
-                        ? 'border-blue-400 bg-blue-50'
-                        : 'border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100'
+                    relative border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-300 cursor-pointer
+                    ${isDragOver
+                        ? 'border-blue-500 bg-blue-50/50 scale-[1.02] shadow-lg'
+                        : currentFile
+                            ? 'border-green-500 bg-green-50/50 hover:bg-green-50 hover:border-green-600'
+                            : 'border-gray-300 bg-white hover:border-blue-400 hover:bg-blue-50/30 hover:shadow-md'
                     }
-          ${currentFile ? 'border-green-400 bg-green-50' : ''}
-        `}
+                    ${isUploading ? 'pointer-events-none' : ''}
+                    group-hover:scale-[1.01]
+                `}
                 onDrop={handleDrop}
                 onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
                 onDragLeave={() => setIsDragOver(false)}
+                onClick={handleClick}
             >
-                <input
-                    type="file"
-                    accept={acceptedTypes}
-                    onChange={handleFileSelect}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    disabled={isUploading}
-                />
-
                 {isUploading ? (
-                    <div className="space-y-2">
-                        <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
-                        <p className="text-gray-600">Uploading...</p>
+                    <div className="space-y-4">
+                        <div className="w-12 h-12 mx-auto">
+                            <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+                        </div>
+                        <div>
+                            <p className="text-gray-700 font-medium">Uploading...</p>
+                            <p className="text-sm text-gray-500 mt-1">Please wait</p>
+                        </div>
                     </div>
                 ) : currentFile ? (
-                    <div className="space-y-2">
-                        <div className="text-green-600 text-2xl">✅</div>
-                        <p className="text-green-700 font-medium">{currentFile}</p>
-                        <p className="text-sm text-gray-600">Click to replace or drag new file</p>
+                    <div className="space-y-4">
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                            <span className="text-2xl">✅</span>
+                        </div>
+                        <div>
+                            <p className="text-green-700 font-semibold text-lg">{currentFile}</p>
+                            <p className="text-sm text-gray-600 mt-2 bg-gray-100 rounded-lg px-3 py-1 inline-block">
+                                Click to replace or drag new file
+                            </p>
+                        </div>
                     </div>
                 ) : (
-                    <div className="space-y-2">
-                        <div className="text-gray-400 text-3xl">{icon}</div>
-                        <p className="text-gray-600">{placeholder}</p>
-                        <p className="text-sm text-gray-500">
-                            Drag & drop or click to select • {acceptedTypes.toUpperCase()}
-                        </p>
+                    <div className="space-y-4">
+                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto group-hover:bg-blue-100 transition-colors">
+                            <span className="text-3xl text-gray-400 group-hover:text-blue-500 transition-colors">📄</span>
+                        </div>
+                        <div>
+                            <p className="text-gray-700 font-medium text-lg">{placeholder}</p>
+                            <p className="text-sm text-gray-500 mt-2">
+                                Drag & drop or <span className="text-blue-600 font-medium">click to browse</span>
+                            </p>
+                            <p className="text-xs text-gray-400 mt-2 bg-gray-50 rounded-lg px-3 py-1 inline-block">
+                                Supports {acceptedTypes.toUpperCase()}
+                            </p>
+                        </div>
                     </div>
                 )}
             </div>

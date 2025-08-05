@@ -8,13 +8,15 @@ interface ConversationProps {
 
 export const Conversation = ({ conversation }: ConversationProps) => {
     return (
-        <div className="w-full max-w-4xl mx-auto rounded-2xl overflow-hidden shadow-xl bg-white min-h-[400px]">
+        <div className="w-full max-w-4xl mx-auto rounded-2xl overflow-hidden shadow-xl bg-white border border-gray-200 min-h-[500px]">
             {conversation.length === 0 ? (
                 <EmptyState />
             ) : (
-                conversation.map((entry) => (
-                    <Message key={entry.id} entry={entry} />
-                ))
+                <div className="max-h-[600px] overflow-y-auto">
+                    {conversation.map((entry) => (
+                        <Message key={entry.id} entry={entry} />
+                    ))}
+                </div>
             )}
         </div>
     )
