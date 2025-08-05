@@ -6,6 +6,7 @@ interface ControlsProps {
     onStopListening: () => void
     onClearConversation: () => void
     onToggleMute: () => void
+    showManualRestart?: boolean
 }
 
 export const Controls = ({
@@ -15,7 +16,8 @@ export const Controls = ({
     onStartListening,
     onStopListening,
     onClearConversation,
-    onToggleMute
+    onToggleMute,
+    showManualRestart = false
 }: ControlsProps) => {
     return (
         <div className="flex flex-wrap gap-4 justify-center w-full">
@@ -33,6 +35,19 @@ export const Controls = ({
             >
                 {isListening ? '🔴 Stop Listening' : '🎤 Start Listening'}
             </button>
+
+            {showManualRestart && !isListening && (
+                <button
+                    className="px-6 py-3 rounded-full text-md font-semibold bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:-translate-y-0.5 transition-all duration-300"
+                    onClick={() => {
+                        onStopListening()
+                        setTimeout(onStartListening, 500)
+                    }}
+                    disabled={isResponding}
+                >
+                    🔄 Restart Mic
+                </button>
+            )}
 
             <button
                 className={`

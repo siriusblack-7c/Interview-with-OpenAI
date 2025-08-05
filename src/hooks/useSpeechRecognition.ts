@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
+import { logBrowserInfo } from '../utils/browserCheck'
 
 interface UseSpeechRecognitionOptions {
     onFinalTranscript: (transcript: string) => void
     pauseListening?: boolean
+    onError?: (error: string) => void
 }
 
 declare global {
@@ -12,7 +14,7 @@ declare global {
     }
 }
 
-export const useSpeechRecognition = ({ onFinalTranscript, pauseListening = false }: UseSpeechRecognitionOptions) => {
+export const useSpeechRecognition = ({ onFinalTranscript, pauseListening = false, onError }: UseSpeechRecognitionOptions) => {
     const [isListening, setIsListening] = useState(false)
     const [currentTranscript, setCurrentTranscript] = useState('')
     const [isSupported, setIsSupported] = useState(false)
@@ -26,6 +28,17 @@ export const useSpeechRecognition = ({ onFinalTranscript, pauseListening = false
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
         console.log('🎤 [Mic] Speech recognition supported:', !!SpeechRecognition)
 
+        // Detailed browser compatibility check
+        const browserInfo = logBrowserInfo()
+
+        if (browserInfo.compatibility.level === 'none') {
+            console.error('❌ [Browser] Incompatible browser detected')
+            console.error('🚨 [Browser] Issues:', browserInfo.compatibility.issues)
+        } else if (browserInfo.compatibility.level === 'partial') {
+            console.warn('⚠️ [Browser] Partial support detected')
+            console.warn('🚨 [Browser] Potential issues:', browserInfo.compatibility.issues)
+        }
+
         if (SpeechRecognition) {
             setIsSupported(true)
             recognitionRef.current = new SpeechRecognition()
@@ -35,10 +48,36 @@ export const useSpeechRecognition = ({ onFinalTranscript, pauseListening = false
             recognition.interimResults = true
             recognition.lang = 'en-US'
 
+            // Production-specific settings for Vercel
+            recognition.maxAlternatives = 1
+            recognition.serviceURI = undefined // Let browser choose
+
+            // Additional timeout handling for production
+            let silenceTimeout: NodeJS.Timeout | null = null
+
             console.log('🎤 [Mic] Speech recognition configured')
 
             recognition.onstart = () => {
-                console.log('🎙️ [Mic] Recognition started')
+                console.log('🎙️ [Mic] Recognition started successfully')
+                console.log('📊 [Mic] Recognition state - continuous:', recognition.continuous, 'interim:', recognition.interimResults)
+
+                // Clear any existing silence timeout
+                if (silenceTimeout) {
+                    clearTimeout(silenceTimeout)
+                    silenceTimeout = null
+                }
+
+                // Set a longer timeout for production environments
+                silenceTimeout = setTimeout(() => {
+                    if (shouldKeepListening && !wasPausedForSpeech) {
+                        console.log('⏰ [Mic] Silence timeout - restarting recognition')
+                        try {
+                            recognition.stop()
+                        } catch (e) {
+                            console.warn('⚠️ [Mic] Error stopping for timeout restart:', e)
+                        }
+                    }
+                }, 30000) // 30 second timeout for production
             }
 
             recognition.onresult = (event: any) => {
@@ -76,6 +115,12 @@ export const useSpeechRecognition = ({ onFinalTranscript, pauseListening = false
 
             recognition.onerror = (event: any) => {
                 console.error('❌ [Mic] Recognition error:', event.error)
+                console.error('📋 [Mic] Error details:', {
+                    error: event.error,
+                    message: event.message,
+                    timeStamp: event.timeStamp,
+                    type: event.type
+                })
                 setIsListening(false)
 
                 // Auto-restart on certain errors if we should keep listening
@@ -105,19 +150,42 @@ export const useSpeechRecognition = ({ onFinalTranscript, pauseListening = false
                 console.log('🛑 [Mic] Recognition ended')
                 setIsListening(false)
 
+                // Clear silence timeout
+                if (silenceTimeout) {
+                    clearTimeout(silenceTimeout)
+                    silenceTimeout = null
+                }
+
                 // Auto-restart if we should keep listening and we're not paused for speech
                 if (shouldKeepListening && !wasPausedForSpeech) {
                     console.log('🔄 [Mic] Auto-restarting recognition...')
+                    // Longer delay for production environments
+                    const restartDelay = window.location.hostname.includes('.vercel.app') ? 500 : 100
                     setTimeout(() => {
                         try {
-                            if (recognitionRef.current && shouldKeepListening) {
+                            if (recognitionRef.current && shouldKeepListening && isSupported) {
+                                console.log('🚀 [Mic] Attempting restart...')
                                 recognitionRef.current.start()
                                 setIsListening(true)
                             }
                         } catch (error) {
                             console.error('❌ [Mic] Error auto-restarting:', error)
+                            // If restart fails, wait longer and try again
+                            setTimeout(() => {
+                                if (shouldKeepListening) {
+                                    console.log('🔄 [Mic] Retry restart after error...')
+                                    try {
+                                        recognitionRef.current?.start()
+                                        setIsListening(true)
+                                    } catch (retryError) {
+                                        console.error('❌ [Mic] Retry failed:', retryError)
+                                        setShouldKeepListening(false)
+                                        onError?.('Speech recognition failed to restart. Please try again.')
+                                    }
+                                }
+                            }, 2000)
                         }
-                    }, 100) // Small delay before restart
+                    }, restartDelay)
                 }
             }
 
@@ -150,7 +218,7 @@ export const useSpeechRecognition = ({ onFinalTranscript, pauseListening = false
                 recognitionRef.current.stop()
             }
         }
-    }, [onFinalTranscript])
+    }, [onFinalTranscript, shouldKeepListening, wasPausedForSpeech])
 
     // Effect to handle pausing/resuming recognition during AI speech
     useEffect(() => {
@@ -177,18 +245,40 @@ export const useSpeechRecognition = ({ onFinalTranscript, pauseListening = false
         }
     }, [pauseListening, wasPausedForSpeech, isListening, isSupported, shouldKeepListening])
 
-    const startListening = () => {
+    const startListening = async () => {
         console.log('🎤 [Controls] Starting microphone...')
+
+        // Check microphone permissions first
+        try {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                console.log('🔐 [Permissions] Checking microphone access...')
+                await navigator.mediaDevices.getUserMedia({ audio: true })
+                console.log('✅ [Permissions] Microphone access granted')
+            }
+        } catch (permError) {
+            console.error('❌ [Permissions] Microphone permission error:', permError)
+            onError?.('Microphone permission denied. Please allow microphone access and try again.')
+            return
+        }
+
         if (recognitionRef.current && !isListening) {
             setShouldKeepListening(true)
             setIsListening(true)
             try {
                 recognitionRef.current.start()
-            } catch (error) {
+                console.log('🚀 [Controls] Recognition start command sent')
+            } catch (error: any) {
                 console.error('❌ [Controls] Error starting microphone:', error)
+                console.error('📋 [Controls] Error details:', {
+                    name: error?.name,
+                    message: error?.message,
+                    stack: error?.stack
+                })
                 setIsListening(false)
                 setShouldKeepListening(false)
             }
+        } else {
+            console.warn('⚠️ [Controls] Cannot start - recognition not available or already listening')
         }
     }
 
