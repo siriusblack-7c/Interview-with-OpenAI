@@ -41,7 +41,7 @@ export const useOpenAI = () => {
                     setIsResponding(false)
                 }
 
-                utterance.onerror = (event) => {
+                utterance.onerror = (event: any) => {
                     console.error('❌ [TTS] Speech error:', event)
                     setIsResponding(false)
                 }

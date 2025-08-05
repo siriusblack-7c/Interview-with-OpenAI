@@ -4,12 +4,19 @@ interface UseSpeechRecognitionOptions {
     onFinalTranscript: (transcript: string) => void
 }
 
+declare global {
+    interface Window {
+        SpeechRecognition: any
+        webkitSpeechRecognition: any
+    }
+}
+
 export const useSpeechRecognition = ({ onFinalTranscript }: UseSpeechRecognitionOptions) => {
     const [isListening, setIsListening] = useState(false)
     const [currentTranscript, setCurrentTranscript] = useState('')
     const [isSupported, setIsSupported] = useState(false)
 
-    const recognitionRef = useRef<SpeechRecognition | null>(null)
+    const recognitionRef = useRef<any | null>(null)
 
     useEffect(() => {
         // Check if speech recognition is supported
@@ -31,7 +38,7 @@ export const useSpeechRecognition = ({ onFinalTranscript }: UseSpeechRecognition
                 console.log('🎙️ [Mic] Recognition started')
             }
 
-            recognition.onresult = (event) => {
+            recognition.onresult = (event: any) => {
                 let transcript = ''
                 let interimTranscript = ''
                 let finalTranscript = ''
@@ -64,7 +71,7 @@ export const useSpeechRecognition = ({ onFinalTranscript }: UseSpeechRecognition
                 }
             }
 
-            recognition.onerror = (event) => {
+            recognition.onerror = (event: any) => {
                 console.error('❌ [Mic] Recognition error:', event.error)
                 setIsListening(false)
             }
