@@ -44,12 +44,7 @@ function App() {
   }
 
   const { isListening, currentTranscript, isSupported, startListening, stopListening } = useSpeechRecognition({
-    onFinalTranscript: handleFinalTranscript,
-    pauseListening: isResponding && !isMuted,
-    onError: (errorMsg) => {
-      console.error('Speech recognition error:', errorMsg)
-      clearApiError()
-    }
+    onFinalTranscript: handleFinalTranscript
   })
 
   const handleClearConversation = () => {
@@ -126,7 +121,7 @@ function App() {
           onStopListening={stopListening}
           onClearConversation={handleClearConversation}
           onToggleMute={toggleMute}
-          showManualRestart={window.location.hostname.includes('.vercel.app')}
+
         />
 
         <StatusIndicators

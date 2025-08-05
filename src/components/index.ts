@@ -11,7 +11,6 @@ export { SetupInstructions } from './SetupInstructions'
 export { FileUploader } from './FileUploader'
 export { InterviewSetup } from './InterviewSetup'
 export { InterviewControls } from './InterviewControls'
-export { PermissionChecker } from './PermissionChecker'
 
 // Re-export types
 export type { ConversationEntry } from './Message'
