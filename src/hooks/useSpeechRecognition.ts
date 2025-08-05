@@ -34,8 +34,8 @@ export const useSpeechRecognition = ({ onFinalTranscript }: UseSpeechRecognition
             recognition.lang = 'en-US'
 
             recognition.onstart = () => {
-                console.log('🎙️ Started listening')
-                setIsListening(true)
+                console.log('🎙️ Speech recognition started')
+                // Note: isListening state is set immediately in startListening()
             }
 
             recognition.onresult = (event: any) => {
@@ -73,8 +73,8 @@ export const useSpeechRecognition = ({ onFinalTranscript }: UseSpeechRecognition
             }
 
             recognition.onend = () => {
-                console.log('🛑 Recognition ended')
-                setIsListening(false)
+                console.log('🛑 Speech recognition ended')
+                // Note: isListening state is set immediately in stopListening()
                 setCurrentTranscript('')
                 if (silenceTimeoutRef.current) {
                     clearTimeout(silenceTimeoutRef.current)
@@ -98,6 +98,8 @@ export const useSpeechRecognition = ({ onFinalTranscript }: UseSpeechRecognition
     const startListening = () => {
         console.log('🎤 Starting to listen...')
         if (recognitionRef.current && !isListening) {
+            setIsListening(true) // 🚀 IMMEDIATE UI feedback!
+            setCurrentTranscript('')
             try {
                 recognitionRef.current.start()
             } catch (error) {
@@ -109,7 +111,9 @@ export const useSpeechRecognition = ({ onFinalTranscript }: UseSpeechRecognition
 
     const stopListening = () => {
         console.log('🛑 Stopping listening...')
-        if (recognitionRef.current && isListening) {
+        setIsListening(false) // 🚀 IMMEDIATE UI feedback!
+        setCurrentTranscript('')
+        if (recognitionRef.current) {
             recognitionRef.current.stop()
         }
         if (silenceTimeoutRef.current) {
