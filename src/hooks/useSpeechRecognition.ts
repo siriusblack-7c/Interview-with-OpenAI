@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { logBrowserInfo } from '../utils/browserCheck'
+import { isMediaDevicesSupported, requestMicrophoneAccess, stopMediaStream } from '../utils/mediaUtils'
 
 interface UseSpeechRecognitionOptions {
     onFinalTranscript: (transcript: string) => void
@@ -250,12 +251,16 @@ export const useSpeechRecognition = ({ onFinalTranscript, pauseListening = false
 
         // Check microphone permissions first
         try {
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            if (isMediaDevicesSupported()) {
                 console.log('🔐 [Permissions] Checking microphone access...')
-                await navigator.mediaDevices.getUserMedia({ audio: true })
+                const stream = await requestMicrophoneAccess()
+                stopMediaStream(stream) // Clean up immediately
                 console.log('✅ [Permissions] Microphone access granted')
+            } else {
+                console.warn('⚠️ [Permissions] MediaDevices API not available')
+                // Continue anyway - some browsers may still support speech recognition
             }
-        } catch (permError) {
+        } catch (permError: any) {
             console.error('❌ [Permissions] Microphone permission error:', permError)
             onError?.('Microphone permission denied. Please allow microphone access and try again.')
             return

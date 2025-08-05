@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { isPermissionsAPISupported, isMediaDevicesSupported, requestMicrophoneAccess, stopMediaStream, checkMicrophonePermission } from '../utils/mediaUtils'
 
 interface PermissionStatus {
     microphone: 'granted' | 'denied' | 'prompt' | 'unknown'
@@ -23,31 +24,36 @@ export const PermissionChecker = ({
 
         try {
             // Check if permissions API is available
-            if ('permissions' in navigator) {
-                const permission = await navigator.permissions.query({ name: 'microphone' as PermissionName })
+            if (isPermissionsAPISupported()) {
+                const permissionState = await checkMicrophonePermission()
                 setStatus(prev => ({
                     ...prev,
-                    microphone: permission.state,
+                    microphone: permissionState,
                     isChecking: false
                 }))
 
-                if (permission.state === 'granted') {
+                if (permissionState === 'granted') {
                     onPermissionGranted()
-                } else if (permission.state === 'denied') {
+                } else if (permissionState === 'denied') {
                     onPermissionDenied('Microphone access denied. Please enable microphone permissions in your browser settings.')
                 }
             } else {
                 // Fallback: Try to access microphone directly
                 console.log('🔍 [Permissions] Permissions API not available, trying direct access')
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-                stream.getTracks().forEach(track => track.stop()) // Clean up
 
-                setStatus(prev => ({
-                    ...prev,
-                    microphone: 'granted',
-                    isChecking: false
-                }))
-                onPermissionGranted()
+                if (isMediaDevicesSupported()) {
+                    const stream = await requestMicrophoneAccess()
+                    stopMediaStream(stream) // Clean up immediately
+
+                    setStatus(prev => ({
+                        ...prev,
+                        microphone: 'granted',
+                        isChecking: false
+                    }))
+                    onPermissionGranted()
+                } else {
+                    throw new Error('MediaDevices API not supported in this browser')
+                }
             }
         } catch (error: any) {
             console.error('❌ [Permissions] Error checking microphone:', error)

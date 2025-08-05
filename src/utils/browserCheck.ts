@@ -8,7 +8,7 @@ export const checkBrowserCompatibility = () => {
     const isMobile = /android|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent)
 
     const hasWebSpeech = !!(window.SpeechRecognition || window.webkitSpeechRecognition)
-    const hasMediaDevices = !!navigator.mediaDevices
+    const hasMediaDevices = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
 
     return {
         browser: {
