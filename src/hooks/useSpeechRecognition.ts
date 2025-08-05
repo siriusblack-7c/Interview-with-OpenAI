@@ -17,6 +17,7 @@ export const useSpeechRecognition = ({ onFinalTranscript, pauseListening = false
     const [currentTranscript, setCurrentTranscript] = useState('')
     const [isSupported, setIsSupported] = useState(false)
     const [wasPausedForSpeech, setWasPausedForSpeech] = useState(false)
+    const [shouldKeepListening, setShouldKeepListening] = useState(false)
 
     const recognitionRef = useRef<any | null>(null)
 
@@ -76,11 +77,48 @@ export const useSpeechRecognition = ({ onFinalTranscript, pauseListening = false
             recognition.onerror = (event: any) => {
                 console.error('❌ [Mic] Recognition error:', event.error)
                 setIsListening(false)
+
+                // Auto-restart on certain errors if we should keep listening
+                if (shouldKeepListening && !wasPausedForSpeech) {
+                    const errorType = event.error
+                    if (errorType === 'no-speech' || errorType === 'audio-capture' || errorType === 'network') {
+                        console.log('🔄 [Mic] Auto-restarting after recoverable error...')
+                        setTimeout(() => {
+                            try {
+                                if (recognitionRef.current && shouldKeepListening) {
+                                    recognitionRef.current.start()
+                                    setIsListening(true)
+                                }
+                            } catch (error) {
+                                console.error('❌ [Mic] Error auto-restarting after error:', error)
+                            }
+                        }, 1000) // Longer delay for error recovery
+                    } else {
+                        // For non-recoverable errors, stop trying
+                        console.error('❌ [Mic] Non-recoverable error, stopping auto-restart')
+                        setShouldKeepListening(false)
+                    }
+                }
             }
 
             recognition.onend = () => {
                 console.log('🛑 [Mic] Recognition ended')
                 setIsListening(false)
+
+                // Auto-restart if we should keep listening and we're not paused for speech
+                if (shouldKeepListening && !wasPausedForSpeech) {
+                    console.log('🔄 [Mic] Auto-restarting recognition...')
+                    setTimeout(() => {
+                        try {
+                            if (recognitionRef.current && shouldKeepListening) {
+                                recognitionRef.current.start()
+                                setIsListening(true)
+                            }
+                        } catch (error) {
+                            console.error('❌ [Mic] Error auto-restarting:', error)
+                        }
+                    }, 100) // Small delay before restart
+                }
             }
 
             recognition.onspeechstart = () => {
@@ -107,6 +145,7 @@ export const useSpeechRecognition = ({ onFinalTranscript, pauseListening = false
         }
 
         return () => {
+            setShouldKeepListening(false)
             if (recognitionRef.current) {
                 recognitionRef.current.stop()
             }
@@ -121,7 +160,7 @@ export const useSpeechRecognition = ({ onFinalTranscript, pauseListening = false
             if (recognitionRef.current) {
                 recognitionRef.current.stop()
             }
-        } else if (!pauseListening && wasPausedForSpeech) {
+        } else if (!pauseListening && wasPausedForSpeech && shouldKeepListening) {
             console.log('▶️ [Mic] Resuming recognition after AI speech')
             setWasPausedForSpeech(false)
             if (recognitionRef.current && isSupported) {
@@ -136,23 +175,26 @@ export const useSpeechRecognition = ({ onFinalTranscript, pauseListening = false
                 }, 500) // Small delay to ensure TTS has fully stopped
             }
         }
-    }, [pauseListening, wasPausedForSpeech, isListening, isSupported])
+    }, [pauseListening, wasPausedForSpeech, isListening, isSupported, shouldKeepListening])
 
     const startListening = () => {
         console.log('🎤 [Controls] Starting microphone...')
         if (recognitionRef.current && !isListening) {
+            setShouldKeepListening(true)
             setIsListening(true)
             try {
                 recognitionRef.current.start()
             } catch (error) {
                 console.error('❌ [Controls] Error starting microphone:', error)
                 setIsListening(false)
+                setShouldKeepListening(false)
             }
         }
     }
 
     const stopListening = () => {
         console.log('🛑 [Controls] Stopping microphone...')
+        setShouldKeepListening(false) // Prevent auto-restart
         if (recognitionRef.current && isListening) {
             recognitionRef.current.stop()
             setIsListening(false)
